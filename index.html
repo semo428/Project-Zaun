@@ -152,6 +152,9 @@
     .card{backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px)}
     body::before{filter:blur(14px)}
   }
+  /* echte sichtbare Hoehe auf Handys (100vh schneidet unten ab) */
+  body.h-screen{height:100vh; height:100dvh}
+  .pb-safe{padding-bottom:max(.85rem, env(safe-area-inset-bottom, .85rem))}
 </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -355,7 +358,7 @@
 
       <div id="chat-messages" class="flex-1 overflow-y-auto px-4 sm:px-8 py-4 space-y-4"></div>
 
-      <div class="px-4 sm:px-8 pb-3 shrink-0">
+      <div class="px-4 sm:px-8 pb-safe shrink-0">
         <div id="chat-suggestions" class="max-w-3xl mx-auto flex flex-wrap gap-2 mb-3"></div>
         <form id="chat-form" class="max-w-3xl mx-auto flex items-end gap-2">
           <button type="button" id="mic-btn" title="Spracheingabe — am PC klicken, am Handy gedrückt halten (nutzt den Spracherkennungs-Dienst des Browsers)" class="mic field shrink-0 w-11 h-11 flex items-center justify-center" style="color:var(--muted)">
