@@ -369,7 +369,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"/></svg>
           </button>
         </form>
-        <div class="max-w-3xl mx-auto mt-2 text-[11px]" style="color:var(--muted)">Enter = senden · Shift+Enter = neue Zeile · 🎤 PC: klicken · Handy: gedrückt halten</div>
+        <div class="max-w-3xl mx-auto mt-2 text-[11px]" style="color:var(--muted)">🎤 zum Diktieren: am PC klicken, am Handy gedrückt halten</div>
       </div>
     </section>
 
@@ -408,7 +408,8 @@ function switchTab(tab){
   $('nav-chat').style.color = !isForm ? '#fff' : 'var(--muted)';
   $('mnav-form').classList.toggle('active', isForm);
   $('mnav-chat').classList.toggle('active', !isForm);
-  if(!isForm) setTimeout(()=>$('chat-input').focus(), 50);
+  // Desktop (Maus): Eingabe fokussieren. Touch/Handy: NICHT – sonst poppt die Tastatur von selbst auf.
+  if(!isForm && !window.matchMedia('(pointer: coarse)').matches) setTimeout(()=>$('chat-input').focus(), 50);
 }
 
 /* ---------- Dropdowns ---------- */
@@ -592,7 +593,7 @@ $('chat-form').addEventListener('submit', e=>{
 const ta=$('chat-input');
 function autoGrow(){ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,128)+'px'; }
 ta.addEventListener('input', autoGrow);
-ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('chat-form').requestSubmit(); }});
+// Enter erzeugt einen normalen Zeilenumbruch. Gesendet wird ausschließlich über den Senden-Button.
 
 /* ---------- Spracheingabe (Web Speech API — nutzt Browser-Dienst, keine Kundendaten diktieren) ----------
    Laptop/Maus: 1x klicken zum Umschalten. Handy/Touch: gedrückt halten zum Sprechen, loslassen = fertig.
