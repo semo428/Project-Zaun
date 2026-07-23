@@ -569,7 +569,7 @@ function showThinking(){
 }
 async function sendChat(message){
   chatBubble('user', mdLite(message));
-  renderSuggestions();
+  const sug = $('chat-suggestions'); if (sug) sug.style.display = 'none';   // Vorschläge nach 1. Nachricht ausblenden -> mehr Platz für den Verlauf
   const thinking = showThinking();
   try{
     const res = await fetch(CHAT_WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message, sessionId})});
@@ -602,25 +602,29 @@ ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preven
   const btn=$('mic-btn');
   if(!SR){ btn.style.display='none'; return; }
   const rec=new SR(); rec.lang='de-DE'; rec.interimResults=true; rec.continuous=true;
-  let want=false, base='', finalText='', holdMode=false, lastType='mouse';
+  let want=false, base='', committed='', lastFinal='', holdMode=false, lastType='mouse';
 
-  function startRec(){ if(want) return; want=true; base = ta.value ? ta.value+' ' : ''; finalText=''; try{ rec.start(); }catch(e){} }
+  // base   = Text, der vor dem Diktat schon im Feld stand
+  // committed = festgeschriebene Ergebnisse ABGESCHLOSSENER Sessions (Auto-Neustarts)
+  // Innerhalb einer Session wird IMMER komplett aus e.results neu aufgebaut -> kein Doppeln.
+  function startRec(){ if(want) return; want=true; base = ta.value ? ta.value+' ' : ''; committed=''; lastFinal=''; try{ rec.start(); }catch(e){} }
   function stopRec(){ want=false; try{ rec.stop(); }catch(e){} }
   function toggleRec(){ want ? stopRec() : startRec(); }
 
   rec.onstart=()=>{ btn.classList.add('rec'); };
   rec.onresult=e=>{
-    let interim='';
-    for(let i=e.resultIndex; i<e.results.length; i++){
-      const r=e.results[i];
-      if(r.isFinal) finalText += r[0].transcript;
-      else interim += r[0].transcript;
+    let finalT='', interimT='';
+    for(let i=0; i<e.results.length; i++){          // von 0 -> vollständiger Neuaufbau der aktuellen Session
+      const t=e.results[i][0].transcript;
+      if(e.results[i].isFinal) finalT += t; else interimT += t;
     }
-    ta.value = base + finalText + interim; autoGrow();
+    lastFinal = finalT;                             // fuer den Session-Wechsel merken
+    ta.value = base + committed + finalT + interimT; autoGrow();
   };
   rec.onerror=e=>{ if(e.error==='no-speech' || e.error==='aborted') return; want=false; holdMode=false; };
   rec.onend=()=>{
-    if(want){ try{ rec.start(); }catch(e){} }   // Atempause / Hold -> nahtlos weiterhören
+    committed += lastFinal; lastFinal='';           // aktuelle Session festschreiben, dann faengt e.results wieder bei 0 an
+    if(want){ try{ rec.start(); }catch(e){} }       // Atempause / Hold -> nahtlos weiterhören
     else { btn.classList.remove('rec'); ta.focus(); }
   };
 
