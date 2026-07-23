@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zaunpartner Streich · Angebotskalkulator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#0a1710; --bg-2:#0c1e15; --surface:#12271c; --surface-2:#0f2117;
+    --line:#274a37; --text:#eaf3ec; --muted:#93b4a1;
+    --green:#5bd39e; --green-bright:#86e9b3; --leaf:#3fae77; --teal:#4bd6c4; --amber:#e0b155;
+    --glow:rgba(91,211,158,.35);
+    --font:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:var(--font); color:var(--text); line-height:1.5; position:relative;
+    background:linear-gradient(160deg, var(--bg), var(--bg-2));
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  /* dezente, langsam driftende Aurora (Garten-Grün) */
+  body::before{
+    content:""; position:fixed; inset:-20%; z-index:0; pointer-events:none; filter:blur(8px);
+    background:
+      radial-gradient(45% 40% at 15% 12%, rgba(91,211,158,.16), transparent 60%),
+      radial-gradient(40% 38% at 85% 8%, rgba(75,214,196,.12), transparent 60%),
+      radial-gradient(52% 46% at 78% 92%, rgba(63,174,119,.14), transparent 62%);
+    animation:aurora 28s ease-in-out infinite alternate;
+  }
+  @keyframes aurora{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-2%,1.6%,0) scale(1.05)}100%{transform:translate3d(2%,-1%,0) scale(1.03)}}
+  /* feines Raster + Vignette */
+  body::after{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(120% 100% at 50% 0%, transparent 55%, rgba(0,0,0,.34) 100%),
+      linear-gradient(rgba(120,180,150,.03) 1px, transparent 1px) 0 0/100% 40px;
+  }
+  body>*{position:relative; z-index:1}
+
+  .font-sans, body{font-family:var(--font)}
+  .num{font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#2c503a;border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:#3a6b4e}
+
+  /* Zaun-Motiv */
+  .fence{height:24px;width:100%;
+    background:
+      repeating-linear-gradient(90deg, var(--line) 0 2px, transparent 2px 20px),
+      linear-gradient(var(--leaf),var(--leaf)) 0 6px/100% 2px no-repeat,
+      linear-gradient(var(--leaf),var(--leaf)) 0 16px/100% 2px no-repeat;
+    opacity:.5; mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+
+  .card{border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(20,44,31,.66), rgba(14,32,22,.72));
+    border-radius:18px; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 12px 34px -20px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.04);
+    transition:transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s}
+  .card:hover:not(:focus-within){transform:translateY(-2px); box-shadow:0 20px 46px -22px rgba(0,0,0,.85), 0 0 0 1px rgba(91,211,158,.16)}
+
+  .field{background:rgba(15,33,23,.7); border:1px solid var(--line); border-radius:11px; color:var(--text); font-size:14px; transition:.18s}
+  .field:focus{outline:none; border-color:var(--green); box-shadow:0 0 0 3px rgba(91,211,158,.16), 0 0 22px -6px var(--glow)}
+  select.field{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2393b4a1' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center}
+
+  .btn-primary{background:linear-gradient(180deg,var(--green-bright),var(--leaf)); color:#06210f; font-weight:600; border-radius:12px; transition:.18s; box-shadow:0 8px 20px -10px var(--glow); position:relative; overflow:hidden}
+  .btn-primary::after{content:""; position:absolute; inset:0; background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.35),transparent 70%); transform:translateX(-130%); transition:transform .6s}
+  .btn-primary:hover{filter:brightness(1.05); transform:translateY(-2px); box-shadow:0 14px 30px -10px var(--glow)}
+  .btn-primary:hover::after{transform:translateX(130%)}
+  .btn-primary:active{transform:translateY(0)}
+  .btn-primary:disabled{opacity:.55; cursor:not-allowed; transform:none; box-shadow:none}
+
+  .nav-item{border-radius:12px; transition:.18s; border:1px solid transparent}
+  .nav-item.active{background:linear-gradient(180deg,rgba(91,211,158,.16),rgba(91,211,158,.06)); border-color:rgba(91,211,158,.4); color:#fff; box-shadow:0 8px 20px -15px var(--glow)}
+  .nav-item:not(.active):hover{background:rgba(255,255,255,.05); transform:translateX(2px)}
+  .mnav{border:1px solid var(--line); background:var(--surface-2); color:var(--muted); transition:.18s}
+  .mnav.active{background:linear-gradient(180deg,rgba(91,211,158,.18),rgba(91,211,158,.06)); border-color:rgba(91,211,158,.45); color:#fff}
+
+  .mode-pill{color:var(--muted); transition:.15s; cursor:pointer; font-weight:600; background:transparent; border:0}
+  .mode-pill.active{background:rgba(91,211,158,.16); color:#dff7ea; box-shadow:inset 0 0 0 1px rgba(91,211,158,.35)}
+  .mode-pill.active.test{background:rgba(224,177,85,.18); color:#ffe6b3; box-shadow:inset 0 0 0 1px rgba(224,177,85,.4)}
+
+  .badge{border-radius:999px; font-size:11px; padding:3px 10px; border:1px solid; font-weight:600}
+  .chip{background:rgba(15,33,23,.6); border:1px solid var(--line); border-radius:10px; font-size:12px; padding:6px 11px; transition:.15s}
+  button.chip{cursor:pointer}
+  button.chip:hover{border-color:rgba(91,211,158,.4); color:#dff7ea; transform:translateY(-1px)}
+
+  .msg-in{background:linear-gradient(180deg,rgba(18,39,28,.85),rgba(15,33,23,.85)); border:1px solid var(--line); box-shadow:0 6px 18px -14px rgba(0,0,0,.8)}
+  .msg-out{background:linear-gradient(180deg,rgba(91,211,158,.16),rgba(91,211,158,.09)); border:1px solid rgba(91,211,158,.32)}
+
+  .dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin:0 2px;animation:blink 1.2s infinite both}
+  .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+  .rise{animation:rise .4s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .price-pop{animation:pricePop .5s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes pricePop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+
+  .mic{touch-action:none; user-select:none; -webkit-user-select:none; transition:.18s}
+  .mic:hover{border-color:rgba(91,211,158,.4); color:#dff7ea}
+  .mic.rec{background:var(--green);color:#06210f;animation:pulse 1.1s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(91,211,158,.5)}70%{box-shadow:0 0 0 12px rgba(91,211,158,0)}100%{box-shadow:0 0 0 0 rgba(91,211,158,0)}}
+
+  a{color:var(--green-bright)}
+  h1,h2,h3{font-family:var(--font); letter-spacing:-.015em}
+  .grad{background:linear-gradient(100deg,var(--green-bright),var(--teal)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace}
+
+  @media (prefers-reduced-motion: reduce){ body::before{animation:none} .rise,.price-pop,.btn-primary::after{animation:none;transition:none} }
+
+  /* ---- Wald-Panorama (wehende Aeste) + driftende Blaetter ---- */
+  .treeline{position:fixed; left:0; right:0; bottom:0; z-index:0; pointer-events:none;
+    width:100%; height:min(40vh,380px); opacity:.4}
+  .canopy{transform-box:fill-box; transform-origin:bottom center; animation:sway 6s ease-in-out infinite}
+  .canopy.s2{animation-duration:7.6s; animation-delay:-2.2s}
+  .canopy.s3{animation-duration:5.1s; animation-delay:-1.1s}
+  .canopy.s4{animation-duration:8.4s; animation-delay:-3.3s}
+  @keyframes sway{0%,100%{transform:rotate(-1.8deg)}50%{transform:rotate(1.8deg)}}
+  .leaf{position:fixed; top:-26px; z-index:0; pointer-events:none; color:var(--leaf); opacity:0;
+    animation-name:fall; animation-timing-function:linear; animation-iteration-count:infinite}
+  @keyframes fall{
+    0%{opacity:0; transform:translate3d(0,0,0) rotate(0)}
+    12%{opacity:.5} 88%{opacity:.45}
+    100%{opacity:0; transform:translate3d(72px,102vh,0) rotate(340deg)}}
+  /* ---- KI-Recherche-Indikator ---- */
+  .ai-think{display:flex; align-items:center; gap:11px}
+  .ai-orb{width:26px; height:26px; border-radius:50%; position:relative; flex:0 0 auto;
+    background:radial-gradient(circle at 34% 30%, #c9f7e2, var(--green) 46%, var(--leaf) 92%);
+    animation:orbPulse 1.7s ease-in-out infinite}
+  .ai-orb::before{content:""; position:absolute; inset:-4px; border-radius:50%;
+    background:conic-gradient(from 0deg, transparent, rgba(134,233,179,.85), transparent 62%);
+    animation:spin 1.3s linear infinite;
+    -webkit-mask:radial-gradient(farthest-side, transparent 58%, #000 60%);
+            mask:radial-gradient(farthest-side, transparent 58%, #000 60%)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes orbPulse{0%,100%{box-shadow:0 0 0 0 rgba(91,211,158,0)}50%{box-shadow:0 0 16px 3px rgba(91,211,158,.42)}}
+  .ai-think .txt{font-size:13px; color:var(--muted); line-height:1.35}
+  .ai-think .txt b{color:#dff7ea; font-weight:600}
+  #think-phrase{transition:opacity .2s}
+  .think-bar{height:3px; border-radius:3px; margin-top:5px; width:40px;
+    background:linear-gradient(90deg, var(--green), var(--teal)); animation:barflow 1.7s ease-in-out infinite}
+  @keyframes barflow{0%,100%{opacity:.35; width:26px}50%{opacity:1; width:74px}}
+  @media (prefers-reduced-motion: reduce){ .canopy,.leaf,.ai-orb,.ai-orb::before,.think-bar{animation:none} }
+  /* Handy: Deko dezenter, damit sie den kleinen Schirm nicht dominiert */
+  @media (max-width:640px){
+    .treeline{height:20vh; opacity:.22}
+    .canopy{animation-duration:8s}
+    .leaf:nth-of-type(3),.leaf:nth-of-type(5){display:none}
+    .card{backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px)}
+    body::before{filter:blur(14px)}
+  }
+</style>
+</head>
+<body class="h-screen flex overflow-hidden">
+  <!-- ambientes Wald-Panorama (wehende Aeste) -->
+  <svg class="treeline" viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <path d="M0 300 L0 250 Q360 222 720 246 T1440 244 L1440 300 Z" fill="#0b1d12"/>
+    <g transform="translate(150 258) scale(1.15)">
+      <path d="M-8 0 Q-4 -70 -3 -120 L3 -120 Q4 -70 8 0 Z" fill="#0c1f13"/>
+      <g class="canopy s1">
+        <ellipse cx="0" cy="-150" rx="72" ry="62" fill="#10291a"/>
+        <ellipse cx="-48" cy="-118" rx="44" ry="42" fill="#0d2416"/>
+        <ellipse cx="48" cy="-124" rx="47" ry="44" fill="#0d2416"/>
+        <ellipse cx="0" cy="-198" rx="46" ry="42" fill="#123420"/>
+      </g>
+    </g>
+    <g transform="translate(470 262) scale(0.8)">
+      <path d="M-7 0 Q-4 -60 -2 -100 L2 -100 Q4 -60 7 0 Z" fill="#0c1f13"/>
+      <g class="canopy s2">
+        <ellipse cx="0" cy="-128" rx="58" ry="52" fill="#0f271a"/>
+        <ellipse cx="-36" cy="-104" rx="38" ry="36" fill="#0d2416"/>
+        <ellipse cx="38" cy="-108" rx="40" ry="38" fill="#0d2416"/>
+      </g>
+    </g>
+    <g transform="translate(900 260) scale(0.66)">
+      <path d="M-7 0 Q-4 -56 -2 -94 L2 -94 Q4 -56 7 0 Z" fill="#0c1f13"/>
+      <g class="canopy s4">
+        <ellipse cx="0" cy="-120" rx="54" ry="48" fill="#0f271a"/>
+        <ellipse cx="-34" cy="-98" rx="36" ry="34" fill="#0d2416"/>
+        <ellipse cx="34" cy="-100" rx="38" ry="36" fill="#0d2416"/>
+      </g>
+    </g>
+    <g transform="translate(1250 256) scale(1.3)">
+      <path d="M-9 0 Q-4 -76 -3 -130 L3 -130 Q4 -76 9 0 Z" fill="#0c1f13"/>
+      <g class="canopy s3">
+        <ellipse cx="0" cy="-162" rx="78" ry="66" fill="#10291a"/>
+        <ellipse cx="-52" cy="-128" rx="48" ry="46" fill="#0d2416"/>
+        <ellipse cx="52" cy="-132" rx="50" ry="48" fill="#0d2416"/>
+        <ellipse cx="0" cy="-212" rx="50" ry="46" fill="#123420"/>
+      </g>
+    </g>
+  </svg>
+  <svg class="leaf" style="left:14%;width:15px;height:15px;animation-duration:16s;animation-delay:-2s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6 7 5 13 12 22C19 13 18 7 12 2Z" fill="currentColor"/></svg>
+  <svg class="leaf" style="left:33%;width:12px;height:12px;animation-duration:21s;animation-delay:-9s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6 7 5 13 12 22C19 13 18 7 12 2Z" fill="currentColor"/></svg>
+  <svg class="leaf" style="left:57%;width:16px;height:16px;animation-duration:18s;animation-delay:-5s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6 7 5 13 12 22C19 13 18 7 12 2Z" fill="currentColor"/></svg>
+  <svg class="leaf" style="left:76%;width:13px;height:13px;animation-duration:24s;animation-delay:-13s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6 7 5 13 12 22C19 13 18 7 12 2Z" fill="currentColor"/></svg>
+  <svg class="leaf" style="left:89%;width:14px;height:14px;animation-duration:19s;animation-delay:-7s" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6 7 5 13 12 22C19 13 18 7 12 2Z" fill="currentColor"/></svg>
+
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="w-64 shrink-0 h-full flex-col hidden lg:flex" style="background:rgba(8,20,13,.6);border-right:1px solid var(--line)">
+    <div class="p-5">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:var(--green)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8l3-3 3 3v13M14 21V8l3-3 3 3v13M2 12h20M2 16h20"/></svg>
+        </div>
+        <div>
+          <div class="grad font-bold leading-tight text-[15px]">Zaunpartner<br>Streich</div>
+        </div>
+      </div>
+      <div class="text-[11px] tracking-wide uppercase mt-3" style="color:var(--muted)">Angebotskalkulator</div>
+    </div>
+
+    <nav class="px-3 space-y-1.5">
+      <button onclick="switchTab('form')" id="nav-form" class="nav-item active w-full text-left px-3 py-2.5 flex items-center gap-3">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h6"/></svg>
+        <div><div class="font-medium text-sm">Standard-Angebot</div><div class="text-[11px]" style="color:var(--muted)">Formular · Sofortpreis</div></div>
+      </button>
+      <button onclick="switchTab('chat')" id="nav-chat" class="nav-item w-full text-left px-3 py-2.5 flex items-center gap-3" style="color:var(--muted)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div><div class="font-medium text-sm">Sonderauftrag</div><div class="text-[11px]" style="color:var(--muted)">KI-Chat · Recherche</div></div>
+      </button>
+    </nav>
+
+    <div class="mt-auto p-4">
+      <div class="fence mb-4"></div>
+      <div class="text-[11px]" style="color:var(--muted)">ASK CONNECT · n8n</div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="flex-1 h-full flex flex-col relative min-w-0">
+
+    <!-- Mobile-Kopfleiste (nur <lg sichtbar) -->
+    <div class="lg:hidden shrink-0" style="background:rgba(8,20,13,.7);border-bottom:1px solid var(--line)">
+      <div class="flex items-center gap-2 px-4 pt-3">
+        <div class="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style="background:var(--green)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8l3-3 3 3v13M14 21V8l3-3 3 3v13M2 12h20M2 16h20"/></svg>
+        </div>
+        <div class="font-bold text-sm">Zaunpartner Streich</div>
+      </div>
+      <div class="flex gap-1.5 px-4 py-2.5">
+        <button id="mnav-form" onclick="switchTab('form')" class="mnav active flex-1 py-2 rounded-lg text-sm font-medium">Standard-Angebot</button>
+        <button id="mnav-chat" onclick="switchTab('chat')" class="mnav flex-1 py-2 rounded-lg text-sm font-medium">Sonderauftrag</button>
+      </div>
+    </div>
+
+    <!-- ---------- FORM VIEW ---------- -->
+    <section id="view-form" class="flex-1 flex flex-col min-h-0">
+      <header class="px-4 sm:px-8 pt-4 sm:pt-6 pb-4 shrink-0">
+        <h1 class="text-2xl font-bold grad">Standard-Angebot berechnen</h1>
+        <p class="text-sm mt-1" style="color:var(--muted)">Zaunart und Maße wählen — der Preis wird sofort durchkalkuliert (Material + Lohn + Marge).</p>
+        <div class="fence mt-4"></div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto px-4 sm:px-8 pb-10">
+        <div class="max-w-5xl mx-auto grid lg:grid-cols-2 gap-6">
+
+          <!-- Eingabe -->
+          <form id="calc-form" class="card p-6 rise">
+            <h3 class="text-lg font-semibold mb-4">Konfiguration</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="col-span-2 sm:col-span-1">
+                <label class="block text-xs mb-1.5" style="color:var(--muted)">Zaunart</label>
+                <select id="f-zaunart" class="field w-full px-3 py-2.5"></select>
+              </div>
+              <div class="col-span-2 sm:col-span-1">
+                <label class="block text-xs mb-1.5" style="color:var(--muted)">Material</label>
+                <select id="f-material" class="field w-full px-3 py-2.5"></select>
+              </div>
+              <div>
+                <label class="block text-xs mb-1.5" style="color:var(--muted)">Laufende Meter</label>
+                <input type="number" id="f-meter" value="40" min="1" class="field w-full px-3 py-2.5">
+              </div>
+              <div>
+                <label class="block text-xs mb-1.5" style="color:var(--muted)">Höhe (cm)</label>
+                <input type="number" id="f-hoehe" value="180" min="20" class="field w-full px-3 py-2.5">
+              </div>
+              <div>
+                <label class="block text-xs mb-1.5" style="color:var(--muted)">Pfostenabstand (m)</label>
+                <input type="number" id="f-pfostenabstand" value="2.5" step="0.1" class="field w-full px-3 py-2.5">
+              </div>
+              <div>
+                <label class="block text-xs mb-1.5" style="color:var(--muted)">Untergrund</label>
+                <select id="f-untergrund" class="field w-full px-3 py-2.5">
+                  <option value="erde">Erde / Rasen</option>
+                  <option value="kies">Kies</option>
+                  <option value="pflaster">Pflaster</option>
+                  <option value="beton">Beton</option>
+                  <option value="fels">Fels</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mt-4 p-3 rounded-xl" style="background:var(--surface-2);border:1px solid var(--line)">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="f-tor" checked class="w-4 h-4 accent-[#57cc99]">
+                <span class="text-sm font-medium">Tor enthalten</span>
+              </label>
+              <div id="tor-opts" class="grid grid-cols-2 gap-4 mt-3">
+                <div>
+                  <label class="block text-xs mb-1.5" style="color:var(--muted)">Tor-Typ</label>
+                  <select id="f-tor-typ" class="field w-full px-3 py-2.5">
+                    <option value="gehtor">Gehtor</option>
+                    <option value="doppeltor" selected>Doppeltor (Einfahrt)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs mb-1.5" style="color:var(--muted)">Anzahl</label>
+                  <input type="number" id="f-tor-anzahl" value="1" min="1" class="field w-full px-3 py-2.5">
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <label class="block text-xs mb-1.5" style="color:var(--muted)">Anfahrt (km, einfach)</label>
+                <input type="number" id="f-anfahrt" value="18" min="0" class="field w-full px-3 py-2.5">
+              </div>
+              <div>
+                <label class="block text-xs mb-1.5" style="color:var(--muted)">Arbeitsstunden</label>
+                <input type="number" id="f-stunden" value="22" min="0" class="field w-full px-3 py-2.5">
+              </div>
+            </div>
+
+            <button type="submit" id="f-submit" class="btn-primary w-full py-3 mt-6 flex items-center justify-center gap-2">
+              <span id="f-submit-label">Preis berechnen</span>
+            </button>
+            <p class="text-[11px] mt-3 text-center" style="color:var(--muted)">Keine personenbezogenen Daten — reine Kalkulation.</p>
+          </form>
+
+          <!-- Ergebnis -->
+          <div class="rise">
+            <div id="result-empty" class="card p-8 h-full flex flex-col items-center justify-center text-center" style="color:var(--muted)">
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" class="mb-3 opacity-60"><path d="M4 21V8l3-3 3 3v13M14 21V8l3-3 3 3v13M2 12h20M2 16h20"/></svg>
+              <div class="text-sm">Dein durchkalkuliertes Angebot<br>erscheint hier.</div>
+            </div>
+            <div id="result" class="hidden"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- CHAT VIEW ---------- -->
+    <section id="view-chat" class="flex-1 flex-col min-h-0 hidden">
+      <header class="px-4 sm:px-8 pt-4 sm:pt-6 pb-4 shrink-0">
+        <h1 class="text-2xl font-bold grad">Sonderauftrag · KI-Chat</h1>
+        <p class="text-sm mt-1" style="color:var(--muted)">Beschreib den Auftrag frei — der Assistent fragt Offenes nach, recherchiert bei Sonderteilen mehrere Angebote und nennt die Quellen.</p>
+        <div class="fence mt-4"></div>
+      </header>
+
+      <div id="chat-messages" class="flex-1 overflow-y-auto px-4 sm:px-8 py-4 space-y-4"></div>
+
+      <div class="px-4 sm:px-8 pb-3 shrink-0">
+        <div id="chat-suggestions" class="max-w-3xl mx-auto flex flex-wrap gap-2 mb-3"></div>
+        <form id="chat-form" class="max-w-3xl mx-auto flex items-end gap-2">
+          <button type="button" id="mic-btn" title="Spracheingabe — am PC klicken, am Handy gedrückt halten (nutzt den Spracherkennungs-Dienst des Browsers)" class="mic field shrink-0 w-11 h-11 flex items-center justify-center" style="color:var(--muted)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/></svg>
+          </button>
+          <textarea id="chat-input" rows="1" placeholder="z. B. „Ich brauche einen Sichtschutz aus Cortenstahl…“" class="field flex-1 px-4 py-3 resize-none max-h-32"></textarea>
+          <button type="submit" id="chat-send" class="btn-primary shrink-0 w-11 h-11 flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"/></svg>
+          </button>
+        </form>
+        <div class="max-w-3xl mx-auto mt-2 text-[11px]" style="color:var(--muted)">Enter = senden · Shift+Enter = neue Zeile · 🎤 PC: klicken · Handy: gedrückt halten</div>
+      </div>
+    </section>
+
+  </main>
+
+<script>
+/* =========================================================
+   KONFIGURATION — Produktiv-Webhooks (der Kunde chattet über die Web-App)
+   ========================================================= */
+const BASE = 'https://n8n-dev.askconnect.de';
+const CALCULATOR_WEBHOOK_URL = BASE + '/webhook/uc1-angebotskalkulator';
+const CHAT_WEBHOOK_URL        = BASE + '/webhook/uc1-chat-agent';
+
+/* Dropdown-Optionen — Werte = exakte Namen der n8n Data Table.
+   (Standardpreise pflegt ihr in der Data Table; diese Liste ist nur die UI-Auswahl.) */
+const ZAUN_OPTS = {
+  'Doppelstabmattenzaun':{verzinkt:'Verzinkt', anthrazit:'Anthrazit (RAL 7016)', gruen:'Grün'},
+  'Maschendrahtzaun':    {verzinkt:'Verzinkt', gruen:'Grün'},
+  'Holzzaun':            {laerche:'Lärche', douglasie:'Douglasie', kdi:'Kesseldruckimprägniert'},
+  'WPC-Zaun':            {anthrazit:'Anthrazit', braun:'Braun'},
+  'Gabionenzaun':        {standard:'Standard-Füllung'},
+};
+
+const eur = n => (Number(n)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+const $ = id => document.getElementById(id);
+
+/* ---------- Tabs ---------- */
+function switchTab(tab){
+  const isForm = tab==='form';
+  $('view-form').classList.toggle('hidden', !isForm);
+  $('view-chat').classList.toggle('hidden', isForm);
+  $('view-chat').classList.toggle('flex', !isForm);
+  $('nav-form').classList.toggle('active', isForm);
+  $('nav-chat').classList.toggle('active', !isForm);
+  $('nav-form').style.color = isForm ? '#fff' : 'var(--muted)';
+  $('nav-chat').style.color = !isForm ? '#fff' : 'var(--muted)';
+  $('mnav-form').classList.toggle('active', isForm);
+  $('mnav-chat').classList.toggle('active', !isForm);
+  if(!isForm) setTimeout(()=>$('chat-input').focus(), 50);
+}
+
+/* ---------- Dropdowns ---------- */
+function initSelects(){
+  const z = $('f-zaunart');
+  Object.keys(ZAUN_OPTS).forEach(name=> z.add(new Option(name,name)));
+  z.value='Doppelstabmattenzaun';
+  z.addEventListener('change', fillMaterials);
+  fillMaterials();
+}
+function fillMaterials(){
+  const m = $('f-material'); m.innerHTML='';
+  const mats = ZAUN_OPTS[$('f-zaunart').value];
+  Object.entries(mats).forEach(([k,v])=> m.add(new Option(v,k)));
+  if(mats.anthrazit) m.value='anthrazit';
+}
+$('f-tor').addEventListener('change', e=> $('tor-opts').style.display = e.target.checked?'grid':'none');
+
+/* ---------- Formular absenden ---------- */
+$('calc-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const btn=$('f-submit'), lbl=$('f-submit-label');
+  btn.disabled=true; lbl.textContent='Berechne…';
+  const payload = {
+    modus:'standard',
+    zaunart:$('f-zaunart').value, material:$('f-material').value,
+    meter:Number($('f-meter').value), hoehe:Number($('f-hoehe').value),
+    pfostenabstand:Number($('f-pfostenabstand').value),
+    tor:$('f-tor').checked, tor_typ:$('f-tor-typ').value, tor_anzahl:Number($('f-tor-anzahl').value),
+    untergrund:$('f-untergrund').value, anfahrt_km:Number($('f-anfahrt').value),
+    arbeitsstunden:Number($('f-stunden').value),
+  };
+  try{
+    const res = await fetch(CALCULATOR_WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const txt = await res.text();
+    let data; try{ data=JSON.parse(txt); }catch{ data={raw:txt}; }
+    renderResult(data);
+  }catch(err){
+    renderError('Webhook nicht erreichbar. Läuft der n8n-Workflow im Test-Modus („Listen for test event"), ist die Data Table verbunden und CORS erlaubt?');
+    console.error(err);
+  }finally{
+    btn.disabled=false; lbl.textContent='Preis berechnen';
+  }
+});
+
+/* ---------- Ergebnis rendern ---------- */
+function renderResult(data){
+  $('result-empty').classList.add('hidden');
+  const box=$('result'); box.classList.remove('hidden');
+
+  if(data && data.ok===false){
+    const hint = (data.sonderteil ? 'Das sieht nach einem <b>Sonderteil</b> aus — wechsle in den <a href="#" onclick="switchTab(\'chat\');return false">KI-Chat</a>, dort werden die Preise recherchiert.' : '');
+    box.innerHTML = `<div class="card p-6 rise">
+      <div class="badge" style="color:var(--amber);border-color:rgba(217,164,65,.5);background:rgba(217,164,65,.08)">Hinweis</div>
+      <div class="mt-3 text-sm">${(data.fehler||['Unbekannter Fehler']).join('<br>')}</div>
+      <div class="mt-2 text-sm" style="color:var(--muted)">${hint}</div></div>`;
+    return;
+  }
+  const a = data && data.angebot;
+  if(!a){ box.innerHTML=`<div class="card p-6"><pre class="mono text-xs whitespace-pre-wrap">${escapeHtml(JSON.stringify(data,null,2))}</pre></div>`; return; }
+
+  const pos = a.positionen.map(p=>`<div class="flex justify-between py-1.5 text-sm" style="border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${escapeHtml(p.pos)}</span><span class="num font-medium">${eur(p.betrag)}</span></div>`).join('');
+  const chips = [
+    `${a.kennzahlen.laufendeMeter} m`, `${a.kennzahlen.hoeheCm} cm`,
+    `${a.kennzahlen.anzahlPfosten} Pfosten`, `${a.kennzahlen.untergrund}`,
+    `${a.kennzahlen.arbeitsstunden} h`
+  ].map(c=>`<span class="chip">${escapeHtml(String(c))}</span>`).join('');
+  const hinweis = (a && data.hinweise && data.hinweise.length) ? `<div class="mt-3 text-xs" style="color:var(--amber)">${data.hinweise.map(escapeHtml).join('<br>')}</div>` : '';
+
+  box.innerHTML = `<div class="card p-6 rise">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-lg font-semibold">${escapeHtml(a.zaunart)}</div>
+        <div class="text-sm" style="color:var(--muted)">${escapeHtml(a.material)}</div>
+      </div>
+      <span class="badge" style="color:var(--green);border-color:rgba(87,204,153,.5);background:rgba(87,204,153,.10)">Standardpreis</span>
+    </div>
+
+    <div class="mt-5 p-5 rounded-2xl text-center" style="background:linear-gradient(180deg,rgba(87,204,153,.14),rgba(87,204,153,.05));border:1px solid rgba(87,204,153,.32)">
+      <div class="text-[11px] uppercase tracking-wide" style="color:var(--muted)">Verkaufspreis inkl. MwSt.</div>
+      <div class="num font-bold price-pop" style="font-size:38px;line-height:1.1;margin-top:4px">${eur(a.summen.bruttoPreis)}</div>
+      <div class="text-xs mt-1" style="color:var(--muted)">netto <span class="num">${eur(a.summen.nettoPreis)}</span> · zzgl. ${a.summen.mwstProzent}% MwSt. <span class="num">${eur(a.summen.mwstBetrag)}</span></div>
+    </div>
+
+    <div class="flex flex-wrap gap-1.5 mt-4">${chips}</div>
+    <div class="mt-4">${pos}</div>
+    ${hinweis}
+
+    <details class="mt-4">
+      <summary class="text-[11px] cursor-pointer" style="color:var(--muted)">Roh-JSON anzeigen</summary>
+      <pre class="mono text-[11px] mt-2 p-3 rounded-lg overflow-x-auto" style="background:var(--surface-2);border:1px solid var(--line)">${escapeHtml(JSON.stringify(data,null,2))}</pre>
+    </details>
+  </div>`;
+}
+function renderError(msg){
+  $('result-empty').classList.add('hidden');
+  const box=$('result'); box.classList.remove('hidden');
+  box.innerHTML=`<div class="card p-6 rise"><div class="badge" style="color:#ff9a9a;border-color:rgba(255,120,120,.4);background:rgba(255,120,120,.08)">Fehler</div><div class="mt-3 text-sm">${msg}</div></div>`;
+}
+
+/* ========== CHAT ========== */
+const sessionId = 'web-' + Math.random().toString(36).slice(2,10);
+const chatBox = $('chat-messages');
+const SUGGESTIONS = [
+  'Ich brauche einen Sichtschutz aus Cortenstahl, 15 m, 180 cm hoch.',
+  'Kannst du diesen Preis prüfen? https://…',
+  'Sonderanfertigung Metalltor 3 m breit — was kostet das ungefähr?',
+];
+
+function chatBubble(sender, html, opts={}){
+  const wrap=document.createElement('div');
+  wrap.className='max-w-3xl mx-auto w-full flex gap-3 rise '+(sender==='user'?'flex-row-reverse':'');
+  const avatar = sender==='user'
+    ? `<div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" style="background:#2c503a;color:#fff">Du</div>`
+    : `<div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center" style="background:var(--green)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round"><path d="M4 21V8l3-3 3 3v13M14 21V8l3-3 3 3v13M2 12h20"/></svg></div>`;
+  wrap.innerHTML = `${avatar}<div class="${sender==='user'?'msg-out':'msg-in'} px-4 py-2.5 rounded-2xl text-sm leading-relaxed" style="max-width:80%">${html}</div>`;
+  if(opts.id) wrap.id=opts.id;
+  chatBox.appendChild(wrap);
+  chatBox.scrollTop=chatBox.scrollHeight;
+  return wrap;
+}
+function mdLite(t){
+  return escapeHtml(t)
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/(https?:\/\/[^\s]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/\n/g,'<br>');
+}
+function renderSuggestions(){
+  const c=$('chat-suggestions'); c.innerHTML='';
+  SUGGESTIONS.forEach(s=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.style.cursor='pointer'; b.textContent=s;
+    b.onclick=()=>{ $('chat-input').value=s; $('chat-input').focus(); autoGrow(); };
+    c.appendChild(b);
+  });
+}
+function showThinking(){
+  const phrases = [
+    'Verstehe deine Anfrage \u2026',
+    'Durchsuche mehrere Anbieter im Web \u2026',
+    'Lese die Preisseiten der Haendler \u2026',
+    'Vergleiche die Angebote \u2026',
+    'Rechne alles auf den laufenden Meter um \u2026',
+    'Bilde einen realistischen Mittelwert \u2026',
+    'Stelle dein Angebot zusammen \u2026'
+  ];
+  const inner = '<div class="ai-think"><div class="ai-orb"></div><div>'
+    + '<div class="txt"><b>KI recherchiert</b> &middot; <span id="think-phrase">' + phrases[0] + '</span></div>'
+    + '<div class="think-bar"></div></div></div>';
+  const el = chatBubble('ai', inner, {id:'thinking'});
+  let i = 0;
+  const iv = setInterval(function(){
+    i = (i+1) % phrases.length;
+    const s = el.querySelector('#think-phrase');
+    if(s){ s.style.opacity = 0; setTimeout(function(){ s.textContent = phrases[i]; s.style.opacity = 1; }, 190); }
+  }, 2400);
+  return { el: el, stop: function(){ clearInterval(iv); el.remove(); } };
+}
+async function sendChat(message){
+  chatBubble('user', mdLite(message));
+  renderSuggestions();
+  const thinking = showThinking();
+  try{
+    const res = await fetch(CHAT_WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message, sessionId})});
+    const txt = await res.text();
+    let reply; try{ const d=JSON.parse(txt); reply = d.reply || d.output || d.text || txt; }catch{ reply=txt; }
+    thinking.stop();
+    chatBubble('ai', mdLite(String(reply)));
+  }catch(err){
+    thinking.stop();
+    chatBubble('ai', '⚠️ Chat-Webhook nicht erreichbar. Läuft der <b>UseCase01 - Chat-Agent</b> im Test-Modus, und sind OpenAI-/Such-Credentials gesetzt?');
+    console.error(err);
+  }
+}
+$('chat-form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const v=$('chat-input').value.trim(); if(!v) return;
+  $('chat-input').value=''; autoGrow();
+  sendChat(v);
+});
+const ta=$('chat-input');
+function autoGrow(){ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,128)+'px'; }
+ta.addEventListener('input', autoGrow);
+ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('chat-form').requestSubmit(); }});
+
+/* ---------- Spracheingabe (Web Speech API — nutzt Browser-Dienst, keine Kundendaten diktieren) ----------
+   Laptop/Maus: 1x klicken zum Umschalten. Handy/Touch: gedrückt halten zum Sprechen, loslassen = fertig.
+   continuous=true + Auto-Neustart: hört über Atem-/Sprechpausen hinweg weiter. */
+(function initMic(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn=$('mic-btn');
+  if(!SR){ btn.style.display='none'; return; }
+  const rec=new SR(); rec.lang='de-DE'; rec.interimResults=true; rec.continuous=true;
+  let want=false, base='', finalText='', holdMode=false, lastType='mouse';
+
+  function startRec(){ if(want) return; want=true; base = ta.value ? ta.value+' ' : ''; finalText=''; try{ rec.start(); }catch(e){} }
+  function stopRec(){ want=false; try{ rec.stop(); }catch(e){} }
+  function toggleRec(){ want ? stopRec() : startRec(); }
+
+  rec.onstart=()=>{ btn.classList.add('rec'); };
+  rec.onresult=e=>{
+    let interim='';
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      const r=e.results[i];
+      if(r.isFinal) finalText += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    ta.value = base + finalText + interim; autoGrow();
+  };
+  rec.onerror=e=>{ if(e.error==='no-speech' || e.error==='aborted') return; want=false; holdMode=false; };
+  rec.onend=()=>{
+    if(want){ try{ rec.start(); }catch(e){} }   // Atempause / Hold -> nahtlos weiterhören
+    else { btn.classList.remove('rec'); ta.focus(); }
+  };
+
+  // Touch/Pen = gedrückt halten; Maus = Klick zum Umschalten
+  btn.addEventListener('pointerdown', e=>{
+    lastType = e.pointerType || 'mouse';
+    if(lastType==='touch' || lastType==='pen'){
+      e.preventDefault();                                  // verhindert Geister-Klick
+      try{ btn.setPointerCapture(e.pointerId); }catch(_){} // loslassen wird sicher erkannt
+      holdMode=true; startRec();
+    }
+  });
+  const endHold=()=>{ if(holdMode){ holdMode=false; stopRec(); } };
+  btn.addEventListener('pointerup', endHold);
+  btn.addEventListener('pointercancel', endHold);
+  btn.addEventListener('click', ()=>{
+    if(lastType==='touch' || lastType==='pen') return;     // Touch wird per Hold behandelt
+    toggleRec();
+  });
+})();
+
+/* ---------- Utils ---------- */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- Init ---------- */
+initSelects();
+renderSuggestions();
+chatBubble('ai', mdLite('Servus! 🌿 Ich helf dir beim Zaun-Angebot. **Standardzäune** rechnest du am schnellsten links im Formular — für **Sonderaufträge** (spezielle Materialien, Sonderteile) beschreib hier einfach, was du brauchst. Ich frag nach, was noch fehlt, prüfe mehrere Angebote und nenne dir die Quellen.'));
+</script>
+</body>
+</html>
